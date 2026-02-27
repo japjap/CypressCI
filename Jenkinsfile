@@ -7,12 +7,6 @@ pipeline {
 
     stages {
 
-        stage('Checkout') {
-            steps {
-                git 'https://github.com/japjap/CypressCI.git'
-            }
-        }
-
         stage('Install Dependencies') {
             steps {
                 sh 'npm install'

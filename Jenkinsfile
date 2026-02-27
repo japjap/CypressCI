@@ -1,68 +1,68 @@
 pipeline {
     agent any
 
+    tools {
+        nodejs "node18"
+    }
+
     stages {
-        stage('Checkout Code') {
-            steps {
-                echo "📥 Checking out repository..."
-                checkout scm
-            }
-        }
 
         stage('Install Dependencies') {
             steps {
-                echo "📦 Installing npm dependencies..."
-                sh """
-                    cd ${WORKSPACE}
-                    npm ci
-                """
+                echo "📦 Installing dependencies"
+                sh '''
+                  node -v
+                  npm -v
+                  npm ci || npm install
+                '''
             }
         }
 
         stage('Start App') {
             steps {
-                echo "🚀 Starting Next.js app in background..."
-                sh """
-                    cd ${WORKSPACE}
-                    nohup npm run dev > app.log 2>&1 &
-                """
+                echo "🚀 Starting Next.js app"
+                sh '''
+                  npm run dev &
+                '''
             }
         }
 
         stage('Wait for App') {
             steps {
-                echo "⏳ Waiting for app to be ready on http://localhost:3000..."
-                sh """
-                    for i in {1..30}; do
-                        if curl -s http://localhost:3000 > /dev/null; then
-                            echo 'App is ready!'
-                            break
-                        else
-                            echo 'Waiting for app...'
-                            sleep 2
-                        fi
-                    done
-                """
+                echo "⏳ Waiting for app on http://localhost:3000"
+                sh '''
+                  for i in {1..30}; do
+                    if curl -s http://localhost:3000 > /dev/null; then
+                      echo "✅ App is ready"
+                      break
+                    fi
+                    echo "⏳ Waiting for app..."
+                    sleep 2
+                  done
+                '''
             }
         }
 
         stage('Run Cypress Tests') {
             steps {
-                echo "🧪 Running Cypress tests..."
-                sh """
-                    cd ${WORKSPACE}
-                    npx cypress run --config-file cypress.config.js
-                """
+                echo "🧪 Running Cypress tests"
+                sh '''
+                  npx cypress run
+                '''
             }
         }
     }
 
     post {
+        always {
+            archiveArtifacts artifacts: 'cypress/videos/**/*.mp4', allowEmptyArchive: true
+            archiveArtifacts artifacts: 'cypress/screenshots/**/*.png', allowEmptyArchive: true
+        }
         success {
-            echo '✅ Cypress tests passed!'
+            echo '✅ Cypress tests passed'
         }
         failure {
-            echo '❌ Cypress tests failed! Check logs above.'
+            echo '❌ Cypress tests failed'
         }
     }
 }
